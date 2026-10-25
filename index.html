@@ -306,6 +306,68 @@ h2.sm{font-size:50px;margin:14px 0 20px}
 .quiz .qtext .lines i{font-size:24px}
 .rule{padding:28px 44px}.rule .t{font-size:42px}
 .vc{height:300px}.hint{margin-top:22px}
+/* ---- page-turn transitions ---- */
+.slide.on{animation:none}
+.slide.leaving{display:block;z-index:1;pointer-events:none}
+.slide.on.in-fwd{animation:slideInFwd .7s cubic-bezier(.22,.8,.24,1) both}
+.slide.on.in-back{animation:slideInBack .7s cubic-bezier(.22,.8,.24,1) both}
+.slide.leaving.out-fwd{animation:slideOutFwd .5s cubic-bezier(.5,0,.75,0) both}
+.slide.leaving.out-back{animation:slideOutBack .5s cubic-bezier(.5,0,.75,0) both}
+@keyframes slideInFwd{from{opacity:0;transform:translateX(90px) scale(.985);filter:blur(7px)}to{opacity:1;transform:none;filter:blur(0)}}
+@keyframes slideInBack{from{opacity:0;transform:translateX(-90px) scale(.985);filter:blur(7px)}to{opacity:1;transform:none;filter:blur(0)}}
+@keyframes slideOutFwd{from{opacity:1;transform:none;filter:blur(0)}to{opacity:0;transform:translateX(-90px) scale(.985);filter:blur(5px)}}
+@keyframes slideOutBack{from{opacity:1;transform:none;filter:blur(0)}to{opacity:0;transform:translateX(90px) scale(.985);filter:blur(5px)}}
+/* staggered entrance of the parts of the incoming slide */
+.slide.on.in-fwd>*,.slide.on.in-back>*{animation:partIn .75s cubic-bezier(.22,.8,.24,1) both}
+.slide.on.in-fwd>*:nth-child(2),.slide.on.in-back>*:nth-child(2){animation-delay:.07s}
+.slide.on.in-fwd>*:nth-child(3),.slide.on.in-back>*:nth-child(3){animation-delay:.14s}
+.slide.on.in-fwd>*:nth-child(4),.slide.on.in-back>*:nth-child(4){animation-delay:.2s}
+.slide.on.in-fwd>*:nth-child(5),.slide.on.in-back>*:nth-child(5){animation-delay:.26s}
+@keyframes partIn{from{opacity:0;transform:translateY(22px)}to{opacity:1;transform:none}}
+/* step reveals: lift + soft focus */
+.step{opacity:0;transform:translateY(18px) scale(.99);filter:blur(5px);visibility:hidden;transition:opacity .55s cubic-bezier(.22,.8,.24,1),transform .6s cubic-bezier(.22,.8,.24,1),filter .5s ease,visibility 0s linear .6s}
+.step.in{opacity:1;transform:none;filter:blur(0);visibility:visible;transition:opacity .55s cubic-bezier(.22,.8,.24,1),transform .6s cubic-bezier(.22,.8,.24,1),filter .5s ease,visibility 0s}
+body.static .slide *,body.static .step{animation:none!important;transition:none!important;filter:none!important}
+#notes,#jump{opacity:0;transition:opacity .25s ease}
+#notes.on,#jump.on{opacity:1}
+@media (prefers-reduced-motion:reduce){.slide.on.in-fwd,.slide.on.in-back,.slide.on.in-fwd>*,.slide.on.in-back>*{animation:none!important}.step{filter:none;transform:none;transition:opacity .2s}}
+/* ---- answer reveals ---- */
+.slide.instant .step{transition:none!important}
+/* worked lines are "written on" left to right */
+.wl.step{opacity:1;visibility:visible;transform:none;filter:none;clip-path:inset(-10% 100% -10% 0);transition:clip-path .9s cubic-bezier(.65,0,.25,1)!important}
+.wl.step.in{clip-path:inset(-10% -3% -10% 0)}
+/* Do Now answers: wipe down + green glow, card turns green */
+.dn .a.step{opacity:1;visibility:visible;transform:none;filter:none;clip-path:inset(0 0 100% 0);transition:clip-path .65s cubic-bezier(.65,0,.25,1)!important}
+.dn .a.step.in{clip-path:inset(0);animation:glowOk 1.3s ease-out .35s both}
+@keyframes glowOk{0%{text-shadow:0 0 0 rgba(143,209,158,0)}30%{text-shadow:0 0 30px rgba(143,209,158,.95)}100%{text-shadow:0 0 0 rgba(143,209,158,0)}}
+.dn .card{transition:border-color .6s,box-shadow .6s}
+.dn .card:has(.a.in){border-color:rgba(143,209,158,.5);box-shadow:0 24px 60px -30px #000,0 0 0 1px rgba(143,209,158,.18)}
+/* practice cards: answer slides in, card flashes in the route colour */
+.qc .ans{opacity:0;transform:translateX(22px);filter:blur(5px);transition:opacity .45s ease,transform .55s cubic-bezier(.22,.8,.24,1),filter .45s ease}
+.qc.show .ans{opacity:1;transform:none;filter:none}
+.qc.show{animation:qcFlash 1s ease-out}
+@keyframes qcFlash{0%{background:transparent}25%{background:color-mix(in srgb,var(--c) 22%,transparent)}100%{background:rgba(255,255,255,.03)}}
+.qc.show:after{content:"✓";color:var(--c);font-size:22px;margin-left:10px;animation:tickIn .5s cubic-bezier(.2,1.6,.3,1) .15s both}
+.qc.exam.show:after{display:none}
+@keyframes tickIn{from{opacity:0;transform:scale(.3)}to{opacity:1;transform:none}}
+/* quiz: right answer pops, the others sink; tick badge, ring pulses, explanation rises */
+.opt{position:relative;transition:opacity .5s,transform .5s cubic-bezier(.22,.8,.24,1),filter .5s,border-color .5s,background .5s,box-shadow .5s}
+.revealed .opt{opacity:.25;transform:scale(.97);filter:grayscale(.7)}
+.revealed .opt.right{opacity:1;transform:scale(1.03);filter:none;animation:optPop .8s cubic-bezier(.2,1.6,.3,1) both}
+@keyframes optPop{0%{transform:scale(.97)}50%{transform:scale(1.07)}100%{transform:scale(1.03)}}
+.revealed .opt.right:after{content:"✓";position:absolute;right:22px;top:50%;margin-top:-30px;font-size:54px;line-height:60px;color:var(--ok);animation:tickIn .6s cubic-bezier(.2,1.6,.3,1) .25s both}
+.revealed .ring{animation:ringOk .9s ease-out}
+@keyframes ringOk{0%{transform:scale(1)}40%{transform:scale(1.12)}100%{transform:scale(1)}}
+.why.step.in{transition-delay:.35s}
+/* summary blanks */
+.rule .t .blank.in{animation:blankIn .7s cubic-bezier(.22,.8,.24,1)}
+@keyframes blankIn{from{opacity:0;transform:translateY(8px);filter:blur(4px)}to{opacity:1;transform:none;filter:none}}
+/* score bump */
+.team .n.bump{animation:bump .4s cubic-bezier(.2,1.8,.3,1)}
+@keyframes bump{0%{transform:scale(.7)}100%{transform:scale(1)}}
+body.static .qc .ans{opacity:1;transform:none;filter:none}
+
+.quiz .qtext .lines div{min-height:68px}
 </style></head><body>
 <div id="stage">
 <section class="slide" data-title="Title" data-t0="0" data-t1="5" >
@@ -484,11 +546,18 @@ const clock=document.getElementById('clock'), cnt=document.getElementById('cnt')
 
 function stepsOf(i){return [...slides[i].querySelectorAll('.step')];}
 function applySteps(i,n){stepsOf(i).forEach((s,k)=>s.classList.toggle('in',k<n));shown[i]=n;onReveal(i);}
+let booted=false, cleanT=null;
 function go(i,full){
   i=Math.max(0,Math.min(N-1,i));
   savePen();
-  slides[cur].classList.remove('on');cur=i;slides[cur].classList.add('on');
-  if(full) applySteps(cur,stepsOf(cur).length); else applySteps(cur,shown[cur]);
+  const prevI=cur, dir=i>=prevI?'fwd':'back', animate=booted&&i!==prevI&&!document.body.classList.contains('static')&&!matchMedia('(prefers-reduced-motion: reduce)').matches;
+  clearTimeout(cleanT);
+  slides.forEach(s=>s.classList.remove('leaving','in-fwd','in-back','out-fwd','out-back'));
+  if(animate){slides[prevI].classList.add('leaving','out-'+dir);}
+  slides[prevI].classList.remove('on');
+  cur=i;slides[cur].classList.add('on');
+  if(animate){slides[cur].classList.add('in-'+dir);cleanT=setTimeout(()=>slides.forEach(s=>s.classList.remove('leaving','in-fwd','in-back','out-fwd','out-back')),900);}
+  if(full){const sl=slides[cur];sl.classList.add('instant');setTimeout(()=>sl.classList.remove('instant'),150);applySteps(cur,stepsOf(cur).length);} else applySteps(cur,shown[cur]);
   loadPen();updateUI();startQuiz();
   try{history.replaceState(null,'','#'+cur);}catch(e){}
 }
@@ -503,7 +572,7 @@ function onReveal(i){
   const s=slides[i];
   if(s.dataset.quiz!==undefined){
     const done=shown[i]>=1; s.classList.toggle('revealed',done);
-    if(done&&qTimer){clearInterval(qTimer);qTimer=null;}
+    if(done&&qTimer){clearInterval(qTimer);qTimer=null;const nn=s.querySelector('.ring .n');if(nn)nn.textContent='✓';}
   }
 }
 /* quiz countdown */
@@ -554,7 +623,7 @@ function buildJump(){
 /* click handlers inside slides */
 document.querySelectorAll('.vc').forEach(v=>v.addEventListener('click',e=>{e.stopPropagation();v.classList.toggle('flip');}));
 document.querySelectorAll('.qc').forEach(v=>v.addEventListener('click',e=>{e.stopPropagation();v.classList.toggle('show');}));
-document.querySelectorAll('.team').forEach(t=>{let n=0;const el=t.querySelector('.n');t.addEventListener('click',e=>{e.stopPropagation();n+=1;el.textContent=n;});
+document.querySelectorAll('.team').forEach(t=>{let n=0;const el=t.querySelector('.n');t.addEventListener('click',e=>{e.stopPropagation();n+=1;el.textContent=n;el.classList.remove('bump');void el.offsetWidth;el.classList.add('bump');});
   t.addEventListener('contextmenu',e=>{e.preventDefault();e.stopPropagation();n=Math.max(0,n-1);el.textContent=n;});});
 document.querySelectorAll('.blank').forEach(b=>b.addEventListener('click',e=>{e.stopPropagation();b.classList.toggle('in');}));
 /* keys */
@@ -574,12 +643,15 @@ addEventListener('keydown',e=>{
   else if(k==='Home'){go(0,false);}
   else if(k==='End'){go(N-1,false);}
 });
+let tx=null;
+stage.addEventListener('touchstart',e=>{tx=e.changedTouches[0].clientX;},{passive:true});
+stage.addEventListener('touchend',e=>{if(tx===null||pen.classList.contains('on'))return;const dx=e.changedTouches[0].clientX-tx;tx=null;if(Math.abs(dx)>70){dx<0?next():prev();}},{passive:true});
 document.getElementById('stage').addEventListener('click',e=>{if(pen.classList.contains('on'))return;
   if(e.clientX>innerWidth*0.28)next();else prev();});
 if(/full=1/.test(location.search))document.body.classList.add('static');
 const h=parseInt((location.hash||'').slice(1));
 slides[0].classList.add('on');
-go(isNaN(h)?0:h,/full=1/.test(location.search));
+go(isNaN(h)?0:h,/full=1/.test(location.search));booted=true;
 window.__tv={go,next,prev,slides,applySteps};
 })();
 </script></body></html>
