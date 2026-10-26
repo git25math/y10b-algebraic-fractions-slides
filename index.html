@@ -368,7 +368,24 @@ body.static .slide *,body.static .step{animation:none!important;transition:none!
 body.static .qc .ans{opacity:1;transform:none;filter:none}
 
 .quiz .qtext .lines div{min-height:68px}
+
+/* ---- full screen button + adaptive viewport ---- */
+html,body{height:100dvh}
+#fs{position:fixed;right:18px;bottom:18px;z-index:60;width:48px;height:48px;border-radius:14px;border:1px solid rgba(242,237,226,.22);background:rgba(15,20,32,.72);color:#F2EDE2;display:flex;align-items:center;justify-content:center;cursor:pointer;backdrop-filter:blur(8px);-webkit-backdrop-filter:blur(8px);transition:opacity .4s,transform .25s,background .2s,border-color .2s;padding:0}
+#fs:hover{background:rgba(212,176,106,.2);border-color:#D4B06A;transform:scale(1.06)}
+#fs svg{width:24px;height:24px;stroke:currentColor;fill:none;stroke-width:1.9;stroke-linecap:round;stroke-linejoin:round}
+#fs .ic-in{display:none}#fs.on .ic-in{display:block}#fs.on .ic-out{display:none}
+body.idle #fs:not(:hover):not(:focus-visible){opacity:0;pointer-events:none}
+body.idle{cursor:none}
+body.pseudo-fs #help,body.pseudo-fs #foot .brand{display:none}
+#rotate{display:none;position:fixed;left:0;right:0;top:0;z-index:70;padding:10px 16px;text-align:center;font:600 15px/1.3 -apple-system,Arial,sans-serif;color:#1a1405;background:#D4B06A}
+body.portrait #rotate{display:block}
+@media print{#fs,#rotate{display:none}}
+
+body.static #fs,body.static #rotate{display:none!important}
 </style></head><body>
+<button id="fs" type="button" aria-label="Full screen" title="Full screen (F)"><svg class="ic-out" viewBox="0 0 24 24"><path d="M4 9V4h5M20 9V4h-5M4 15v5h5M20 15v5h-5"/></svg><svg class="ic-in" viewBox="0 0 24 24"><path d="M9 4v5H4M15 4v5h5M9 20v-5H4M15 20v-5h5"/></svg></button>
+<div id="rotate">Rotate your device to landscape for the best view</div>
 <div id="stage">
 <section class="slide" data-title="Title" data-t0="0" data-t1="5" >
 <div class="title-wrap">
@@ -531,8 +548,11 @@ const TOTAL=45;
 const PHASES=[['Retrieve & connect',0,9],['Explain & model',9,21],['Apply & practise',21,34],['Review & consolidate',34,45]];
 let cur=0, shown=slides.map(()=>0), penData={}, clockStart=null, elapsed=0, timer=null, qTimer=null;
 
-function fit(){const s=Math.min(innerWidth/1920,innerHeight/1080);stage.style.transform='translate(-50%,-50%) scale('+s+')';}
-addEventListener('resize',fit);fit();
+function vp(){const v=window.visualViewport;return v?[v.width,v.height]:[innerWidth,innerHeight];}
+function fit(){const [w,h]=vp();const s=Math.min(w/1920,h/1080);stage.style.transform='translate(-50%,-50%) scale('+s+')';document.body.classList.toggle('portrait',h>w*1.05);}
+addEventListener('resize',fit);addEventListener('orientationchange',()=>setTimeout(fit,200));
+if(window.visualViewport)visualViewport.addEventListener('resize',fit);
+fit();
 
 /* footer bar */
 const bar=document.getElementById('bar');
@@ -626,6 +646,24 @@ document.querySelectorAll('.qc').forEach(v=>v.addEventListener('click',e=>{e.sto
 document.querySelectorAll('.team').forEach(t=>{let n=0;const el=t.querySelector('.n');t.addEventListener('click',e=>{e.stopPropagation();n+=1;el.textContent=n;el.classList.remove('bump');void el.offsetWidth;el.classList.add('bump');});
   t.addEventListener('contextmenu',e=>{e.preventDefault();e.stopPropagation();n=Math.max(0,n-1);el.textContent=n;});});
 document.querySelectorAll('.blank').forEach(b=>b.addEventListener('click',e=>{e.stopPropagation();b.classList.toggle('in');}));
+/* full screen: standard API, webkit prefix, or a CSS fallback where the API does not exist (iPhone) */
+const fsBtn=document.getElementById('fs'), root=document.documentElement;
+function fsEl(){return document.fullscreenElement||document.webkitFullscreenElement||null;}
+function isFS(){return !!fsEl()||document.body.classList.contains('pseudo-fs');}
+function syncFS(){fsBtn.classList.toggle('on',isFS());fsBtn.setAttribute('aria-label',isFS()?'Exit full screen':'Full screen');fsBtn.title=(isFS()?'Exit full screen':'Full screen')+' (F)';setTimeout(fit,60);setTimeout(fit,350);}
+function toggleFS(){
+  if(fsEl()){(document.exitFullscreen||document.webkitExitFullscreen).call(document);return;}
+  if(document.body.classList.contains('pseudo-fs')){document.body.classList.remove('pseudo-fs');syncFS();return;}
+  const req=root.requestFullscreen||root.webkitRequestFullscreen;
+  if(req){try{const r=req.call(root,{navigationUI:'hide'});if(r&&r.catch)r.catch(()=>{document.body.classList.add('pseudo-fs');syncFS();});}catch(e){document.body.classList.add('pseudo-fs');syncFS();}}
+  else{document.body.classList.add('pseudo-fs');syncFS();}
+}
+['fullscreenchange','webkitfullscreenchange'].forEach(ev=>document.addEventListener(ev,syncFS));
+fsBtn.addEventListener('click',e=>{e.stopPropagation();toggleFS();});
+fsBtn.addEventListener('touchend',e=>e.stopPropagation(),{passive:true});
+let idleT=null;
+function wake(){document.body.classList.remove('idle');clearTimeout(idleT);idleT=setTimeout(()=>document.body.classList.add('idle'),2800);}
+['mousemove','pointerdown','touchstart','keydown'].forEach(ev=>addEventListener(ev,wake,{passive:true}));wake();
 /* keys */
 addEventListener('keydown',e=>{
   if(jump.classList.contains('on')){if(e.key==='Escape'||e.key==='g'||e.key==='G')jump.classList.remove('on');return;}
@@ -639,7 +677,7 @@ addEventListener('keydown',e=>{
   else if(k==='p'||k==='P'){togglePen();}
   else if(k==='c'||k==='C'){ctx.clearRect(0,0,1920,1080);penData[cur]=null;}
   else if(k==='t'||k==='T'){clock.click();}
-  else if(k==='f'||k==='F'){if(!document.fullscreenElement)document.documentElement.requestFullscreen&&document.documentElement.requestFullscreen();else document.exitFullscreen();}
+  else if(k==='f'||k==='F'){toggleFS();}
   else if(k==='Home'){go(0,false);}
   else if(k==='End'){go(N-1,false);}
 });
@@ -652,6 +690,7 @@ if(/full=1/.test(location.search))document.body.classList.add('static');
 const h=parseInt((location.hash||'').slice(1));
 slides[0].classList.add('on');
 go(isNaN(h)?0:h,/full=1/.test(location.search));booted=true;
-window.__tv={go,next,prev,slides,applySteps};
+syncFS();
+window.__tv={go,next,prev,slides,applySteps,toggleFS,isFS};
 })();
 </script></body></html>
